@@ -167,7 +167,7 @@ namespace IronFrame.Utilities
                 var process = IFTestHelper.ExecuteWithWait("fork-bomb");
                 jobObject.AssignProcessToJob(process);
                 IFTestHelper.Continue(process);
-                process.WaitForExit(1000);
+                process.WaitForExit(3000);
                 var hasExited = process.HasExited;
                 if(!hasExited) process.Kill();
                 if (!hasExited)
