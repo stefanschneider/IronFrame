@@ -63,6 +63,18 @@ namespace IronFrame
         }
 
         [FactAdminRequired]
+        void BnechAddedUserAppearsInWardenGroup()
+        {
+            for (int i = 0; i < 100; i++)
+            {
+                manager.CreateUser(testUserName + i.ToString());
+                manager.DeleteUser(testUserName + i.ToString());
+            }
+            manager.CreateUser(testUserName);
+            AssertUserInGroup(testGroupName, testUserName);
+        }
+
+        [FactAdminRequired]
         void UserAddedMultipleTimesThenThrows()
         {
             manager.CreateUser(testUserName);
@@ -135,7 +147,7 @@ namespace IronFrame
 
         private void AssertUserInGroup(string groupName, string userName)
         {
-            using (var localDirectory = new DirectoryEntry(String.Format("WinNT://{0}", Environment.MachineName)))
+            using (var localDirectory = new DirectoryEntry("WinNT://."))
             {
                 DirectoryEntries children = localDirectory.Children;
                 DirectoryEntry group = children.Find(groupName);

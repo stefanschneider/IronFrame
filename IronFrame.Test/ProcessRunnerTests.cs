@@ -226,7 +226,7 @@ namespace IronFrame
 
                     using (var p = Runner.Run(si))
                     {
-                        WaitForGoodExit(p, 1000);
+                        WaitForGoodExit(p, 3000);
 
                         var output = await p.StandardOutput.ReadToEndAsync();
 

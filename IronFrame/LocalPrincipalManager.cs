@@ -32,18 +32,33 @@ namespace IronFrame
         // IISHost.  If it is, then pass an array of groups for the user instead of having this hardcoded.
         //private const string IIS_IUSRS_NAME = "IIS_IUSRS";
 
-        private readonly string directoryPath = String.Format("WinNT://{0}", Environment.MachineName);
+        private readonly string directoryPath = "WinNT://.,Computer";
         private readonly Logger log = LogManager.GetCurrentClassLogger();
         private readonly IDesktopPermissionManager permissionManager;
         private readonly IEnumerable<string> wardenUserGroups;
+        //private List<DirectoryEntry> wardenGroupEntries;
+        //private List<GroupPrincipal> wardenGroupPrincipals;
+        //private PrincipalContext context = new PrincipalContext(ContextType.Machine); 
 
         internal LocalPrincipalManager(IDesktopPermissionManager permissionManager, params string[] userGroupNames)
         {
             this.permissionManager = permissionManager;
             this.wardenUserGroups = userGroupNames ?? new String[0];
+            //wardenGroupEntries = new List<DirectoryEntry>();
+            //foreach (var groupName in wardenUserGroups)
+            //{
+            //    wardenGroupEntries.Add(new DirectoryEntry("WinNT://./" + groupName + ",Group"));
+            //}
+
+            //wardenGroupPrincipals = new List<GroupPrincipal>();
+            //foreach (var groupName in wardenUserGroups)
+            //{
+            //    wardenGroupPrincipals.Add(GroupPrincipal.FindByIdentity(context, groupName));
+            //}
+            
         }
 
-        public LocalPrincipalManager(params string [] userGroupNames)
+        public LocalPrincipalManager(params string[] userGroupNames)
             : this(new DesktopPermissionManager(), userGroupNames)
         {
         }
@@ -100,7 +115,7 @@ namespace IronFrame
                 catch (COMException ex)
                 {
                     // Exception indicates the requested item could not be found, in which case we should return the default value
-                    if ((uint) ex.ErrorCode != COM_EXCEPT_UNKNOWN_DIRECTORY_OBJECT)
+                    if ((uint)ex.ErrorCode != COM_EXCEPT_UNKNOWN_DIRECTORY_OBJECT)
                     {
                         throw;
                     }
@@ -115,6 +130,28 @@ namespace IronFrame
             string rvUserName = null;
             string rvPassword = null;
             LocalPrincipalData rv = null;
+
+            //rvUserName = userName;
+            //rvPassword = "_1@#Aa" + Membership.GeneratePassword(8, 2).ToLowerInvariant() + Membership.GeneratePassword(8, 2).ToUpperInvariant();
+
+            //using (DirectoryEntry localEntry = new DirectoryEntry("WinNT://.,Computer"))
+            //{
+            //    using (DirectoryEntry user = localEntry.Children.Add(userName, "User"))
+            //    {
+            //        user.Invoke("Put", new object[] { "UserFlags", 0x10000 });   // 0x10000 is DONT_EXPIRE_PASSWORD 
+            //        user.Invoke("SetPassword", rvPassword);
+
+            //        user.CommitChanges();
+            //    }
+            //}
+
+            //rv = new LocalPrincipalData(rvUserName, rvPassword);
+            //foreach (string userGroupName in this.wardenUserGroups)
+            //{
+            //    AddUserToGroup(userName, userGroupName);
+            //}
+
+            //return rv;
 
             using (var context = new PrincipalContext(ContextType.Machine))
             {
@@ -145,12 +182,19 @@ namespace IronFrame
                     if (userSaved)
                     {
                         rvUserName = user.SamAccountName;
-                        //AddUserToGroup(context, IIS_IUSRS_NAME, user);
 
-                        foreach(string userGroupName in this.wardenUserGroups)
+                        foreach (string userGroupName in this.wardenUserGroups)
                         {
-                            AddUserToGroup(context, userGroupName, user);
+                            AddUserToGroup(rvUserName, userGroupName);
                         }
+                        //foreach (var groupEntry in this.wardenGroupEntries)
+                        //{
+                        //    AddUserToGroup(rvUserName, groupEntry);
+                        //}
+                        //foreach (var group in this.wardenGroupPrincipals)
+                        //{
+                        //    AddUserToGroup(user, group);
+                        //}
 
                         rv = new LocalPrincipalData(rvUserName, rvPassword);
                     }
@@ -165,55 +209,25 @@ namespace IronFrame
             return rv;
         }
 
-        private void AddUserToGroup(PrincipalContext context, string groupName, UserPrincipal user)
+        private void AddUserToGroup(string userName, string groupName)
         {
-            using (var groupQuery = new GroupPrincipal(context, groupName))
-            using (var searcher = new PrincipalSearcher(groupQuery))
-            using (var group = InvokeSearcherWithRetries(searcher))
+            using (DirectoryEntry groupEntry = new DirectoryEntry("WinNT://./" + groupName + ",Group"))
             {
-                if (group == null)
-                {
-                    throw new ArgumentException(string.Format("The specified group '{0}' does not exist.", groupName), "groupName");
-                }
-
-                // The iisUserGroups.Members.Add attempts to resolve all the SID's of the entries while
-                // it's enumerating for an item.  This approach works around this issue by dynamically
-                // invoking 'Add' with the DN of the user.
-                var groupAsDirectoryEntry = group.GetUnderlyingObject() as DirectoryEntry;
-                var userAsDirectoryEntry = user.GetUnderlyingObject() as DirectoryEntry;
-                groupAsDirectoryEntry.Invoke("Add", new object[] { userAsDirectoryEntry.Path });
-
-                group.Save();
+                groupEntry.Invoke("Add", new object[] { "WinNT://" + userName + ",User" });
+                groupEntry.CommitChanges();
             }
         }
 
-        private Principal InvokeSearcherWithRetries(PrincipalSearcher searcher)
+        private void AddUserToGroup(string userName, DirectoryEntry groupEntry)
         {
-            Principal group = null;
-
-            Func<bool> findGroup = () =>
-            {
-                try
-                {
-                    group = searcher.FindOne() as GroupPrincipal;
-                }
-                catch (COMException ex)
-                {
-                    // No mapping between account names and security IDs was done.
-                    if ((uint)ex.ErrorCode != COM_EXCEPT_ERROR_NONE_MAPPED)
-                    {
-                        throw;
-                    }
-                }
-
-                return group != null;
-            };
-
-            findGroup.RetryUpToNTimes(5, 200);
-
-            return group;
+            groupEntry.Invoke("Add", new object[] { "WinNT://" + userName + ",User" });
+            groupEntry.CommitChanges();
         }
 
-
+        private void AddUserToGroup(UserPrincipal userPrincipal, GroupPrincipal groupPrincipal)
+        {
+            groupPrincipal.Members.Add(userPrincipal);
+            groupPrincipal.Save();
+        }
     }
 }
