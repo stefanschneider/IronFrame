@@ -156,6 +156,7 @@ namespace IronFrame.Utilities
                 throw new Win32Exception(Marshal.GetLastWin32Error());
 
             NativeMethods.DestroyEnvironmentBlock(unmanagedEnv);
+            NativeMethods.CloseHandle(processInfo.hThread);
 
             Handle = processInfo.hProcess;
 

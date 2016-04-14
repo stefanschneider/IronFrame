@@ -24,6 +24,9 @@ namespace IronFrame
 
     internal class ContainerHostClient : IContainerHostClient
     {
+        private const int DefaultCreateProcessTimeout = 15 * 1000;
+        private const int DefaultFindProcessTimeout = 5 * 1000;
+
         JobObject containerJobObject;
         IProcess hostProcess;
         IMessageTransport messageTransport;
@@ -54,7 +57,13 @@ namespace IronFrame
 
         public CreateProcessResult CreateProcess(CreateProcessParams @params)
         {
-            var response = SendMessage<CreateProcessRequest, CreateProcessResponse>(new CreateProcessRequest(@params));
+            CreateProcessResponse response;
+
+            if (!TrySendMessage<CreateProcessRequest, CreateProcessResponse>(new CreateProcessRequest(@params), new TimeSpan(0, 0, 0, 0, DefaultCreateProcessTimeout), out response))
+            {
+                throw new TimeoutException("Sending Stop timedout");
+            }
+
             return response.result;
         }
 
@@ -168,8 +177,13 @@ namespace IronFrame
 
         public FindProcessByIdResult FindProcessById(FindProcessByIdParams @params)
         {
-            var response =
-                SendMessage<FindProcessByIdRequest, FindProcessByIdResponse>(new FindProcessByIdRequest(@params));
+            FindProcessByIdResponse response;
+
+            if (!TrySendMessage<FindProcessByIdRequest, FindProcessByIdResponse>(new FindProcessByIdRequest(@params), new TimeSpan(0, 0, 0, 0, DefaultFindProcessTimeout), out response))
+            {
+                throw new TimeoutException("Sending Stop timedout");
+            }
+            
             return response.result;
         }
     }

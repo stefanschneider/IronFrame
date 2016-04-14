@@ -711,16 +711,6 @@ namespace IronFrame
             }
 
             [Fact]
-            public void WhenGuardIsRunning_Throws()
-            {
-                Container.StartGuard();
-
-                Action action = () => Container.LimitMemory(3000);
-
-                Assert.Throws<InvalidOperationException>(action);
-            }
-
-            [Fact]
             public void ReturnsMemoryLimit()
             {
                 ulong limitInBytes = 2048;

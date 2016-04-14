@@ -140,7 +140,6 @@ namespace IronFrame
             lock (_ioLock)
             {
                 ThrowIfNotActive();
-                ThrowIfGuardActive();
 
                 this.jobObject.SetJobMemoryLimit(limitInBytes);
             }
@@ -357,13 +356,6 @@ namespace IronFrame
             if (currentState == ContainerState.Destroyed)
             {
                 throw new InvalidOperationException("The container has been destroyed.");
-            }
-        }
-        private void ThrowIfGuardActive()
-        {
-            if (guardRunning)
-            {
-                throw new InvalidOperationException("Memory Limits can only be changed before first process is run.");
             }
         }
 

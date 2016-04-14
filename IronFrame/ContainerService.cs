@@ -128,6 +128,8 @@ namespace IronFrame
                     containerSpec.Environment,
                     dependencyHelper);
 
+                container.StartGuard();
+
                 containerPropertiesService.SetProperties(container, containerSpec.Properties);
                 lock (containers)
                 {
