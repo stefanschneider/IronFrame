@@ -294,6 +294,17 @@ namespace IronFrame.Acceptance
                 var actualProcess = Process.GetProcessById(process.Id);
                 Assert.False(actualProcess.HasExited);
 
+                // VERIFY STDOUT IS NOT EMPTY
+                for (int i = 0; i < 50; i++)
+                {
+                    if (io.Output.ToString().Length > 0)
+                    {
+                        break;
+                    }
+                    Thread.Sleep(100);
+                }
+                Assert.True(io.Output.ToString().Length > 0);
+
                 // KILL THE PROCESS AND WAIT FOR EXIT
                 process.Kill();
                 exited = process.TryWaitForExit(2000, out exitCode);
@@ -301,7 +312,6 @@ namespace IronFrame.Acceptance
                 // VERIFY THE PROCESS WAS KILLED
                 Assert.True(exited);
                 Assert.True(actualProcess.HasExited);
-                Assert.True(io.Output.ToString().Length > 0);
             }
 
             [FactAdminRequired]
@@ -384,9 +394,10 @@ namespace IronFrame.Acceptance
                 var userPids = UserPids(username);
                 var pidsInJob = new List<int>();
                 var sw = Stopwatch.StartNew();
-                while (userPids.Count != pidsInJob.Count && sw.ElapsedMilliseconds < 1000)
+                while (userPids.Count != pidsInJob.Count && sw.ElapsedMilliseconds < 4000)
                 {
                     pidsInJob = new JobObject(Container1.Id).GetProcessIds().ToList();
+                    Thread.Sleep(100);
                 }
                 pidsInJob.Sort();
 

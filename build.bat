@@ -1,6 +1,14 @@
 @echo off
 setlocal EnableExtensions
 
+sc queryex seclogon
+net start seclogon
+sc queryex seclogon
+
+fsutil quota query C:
+fsutil quota enforce C:
+fsutil quota query C:
+
 if (%FrameworkDir%)==() set FrameworkDir=%WINDIR%\Microsoft.NET\Framework64\
 if (%FrameworkVersion%)==() set FrameworkVersion=v4.0.30319
 
